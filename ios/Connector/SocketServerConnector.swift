@@ -17,11 +17,19 @@ class SocketServerConnector: NSObject, Connector, StreamDelegate {
   
   var inputStream: InputStream?
   var outputStream: OutputStream?
+  var connectionTimeoutTimer: Timer?
   var totalStr = ""
   
   func disconnect() {
+    
     inputStream?.close()
     outputStream?.close()
+    connectionTimeoutTimer?.invalidate()
+    
+    inputStream = nil
+    outputStream = nil
+    connectionTimeoutTimer = nil
+    
     isConnected = false
     runMethods(methodName: "disconnect", data: JSON())
   }
@@ -35,12 +43,27 @@ class SocketServerConnector: NSObject, Connector, StreamDelegate {
     )
     
     if inputStream != nil && outputStream != nil {
+      
       inputStream!.delegate = self
       outputStream!.delegate = self
       inputStream!.schedule(in: .main, forMode: RunLoop.Mode.default)
       outputStream!.schedule(in: .main, forMode: RunLoop.Mode.default)
       inputStream!.open()
       outputStream!.open()
+      
+      DispatchQueue.main.async {
+        
+        self.connectionTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false, block: { _ in
+          if self.isConnected != true {
+            print("Failed to connect to server.")
+            self.disconnect()
+          } else {
+            self.connectionTimeoutTimer?.invalidate()
+            self.connectionTimeoutTimer = nil
+          }
+        })
+      }
+      
     } else {
       print("Failed to connect to server.")
       disconnect()

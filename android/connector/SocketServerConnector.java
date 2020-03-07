@@ -116,7 +116,8 @@ public class SocketServerConnector extends Connector {
         protected Void doInBackground(Void... params) {
             try {
 
-                Socket socket = new Socket(host, port);
+                Socket socket = new Socket();
+                socket.connect(new InetSocketAddress(host, port), 3000);
 
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
@@ -172,6 +173,9 @@ public class SocketServerConnector extends Connector {
                     }
                 }.start();
 
+            } catch (SocketTimeoutException e) {
+                e.printStackTrace();
+                connectionFailedHandler.handle();
             } catch (ConnectException e) {
                 e.printStackTrace();
                 connectionFailedHandler.handle();
